@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网页元素识别系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 20px;
+            padding-bottom: 40px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            background-color: #f9f9f9;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            border-color: #999;
+            background-color: #f0f0f0;
+        }
+        .result-container {
+            margin-top: 30px;
+            display: none;
+        }
+        .element-card {
+            margin-bottom: 10px;
+            border-left: 4px solid #007bff;
+        }
+        .section-card {
+            margin-bottom: 10px;
+            border-left: 4px solid #28a745;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+        .image-result {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .element-list, .section-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .tab-content {
+            padding: 20px;
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+        }
+        .card-header {
+            padding: 0.5rem 1rem;
+            font-weight: bold;
+        }
+        .zoom-control {
+            margin-bottom: 15px;
+        }
+        .capture-btn {
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">网页元素识别系统</h1>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                上传网页截图进行分析
+            </div>
+            <div class="card-body">
+                <div class="upload-area" id="uploadArea">
+                    <p class="mb-0"><i class="bi bi-cloud-upload"></i> 点击或拖拽图片到这里上传</p>
+                    <input type="file" id="screenshotUpload" accept="image/*" style="display: none;">
+                </div>
+                
+                <div class="text-center">
+                    <button id="captureScreenBtn" class="btn btn-outline-secondary capture-btn">
+                        <i class="bi bi-camera"></i> 截取当前屏幕
+                    </button>
+                </div>
+                
+                <div class="loading" id="loadingIndicator">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">正在分析图像，请稍候...</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="result-container" id="resultContainer">
+            <ul class="nav nav-tabs" id="resultTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="image-tab" data-bs-toggle="tab" data-bs-target="#image-result" type="button" role="tab" aria-controls="image-result" aria-selected="true">分析结果图像</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="elements-tab" data-bs-toggle="tab" data-bs-target="#elements-result" type="button" role="tab" aria-controls="elements-result" aria-selected="false">元素列表</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="sections-tab" data-bs-toggle="tab" data-bs-target="#sections-result" type="button" role="tab" aria-controls="sections-result" aria-selected="false">区块列表</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="stats-tab" data-bs-toggle="tab" data-bs-target="#stats-result" type="button" role="tab" aria-controls="stats-result" aria-selected="false">统计信息</button>
+                </li>
+            </ul>
+            
+            <div class="tab-content" id="resultTabsContent">
+                <div class="tab-pane fade show active" id="image-result" role="tabpanel" aria-labelledby="image-tab">
+                    <div class="zoom-control">
+                        <label for="zoomRange" class="form-label">缩放: <span id="zoomValue">100%</span></label>
+                        <input type="range" class="form-range" min="50" max="200" value="100" id="zoomRange">
+                    </div>
+                    <div class="text-center">
+                        <img id="analyzedImage" class="image-result" src="" alt="分析结果">
+                    </div>
+                </div>
+                
+                <div class="tab-pane fade" id="elements-result" role="tabpanel" aria-labelledby="elements-tab">
+                    <div class="alert alert-info">
+                        <strong>检测到的UI元素:</strong> <span id="elementCount">0</span> 个
+                    </div>
+                    <div class="element-list" id="elementList">
+                        <!-- 元素列表将通过JS动态生成 -->
+                    </div>
+                </div>
+                
+                <div class="tab-pane fade" id="sections-result" role="tabpanel" aria-labelledby="sections-tab">
+                    <div class="alert alert-success">
+                        <strong>检测到的网页区块:</strong> <span id="sectionCount">0</span> 个
+                    </div>
+                    <div class="section-list" id="sectionList">
+                        <!-- 区块列表将通过JS动态生成 -->
+                    </div>
+                </div>
+                
+                <div class="tab-pane fade" id="stats-result" role="tabpanel" aria-labelledby="stats-tab">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-info text-white">元素类型统计</div>
+                                <div class="card-body">
+                                    <canvas id="elementTypeChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-success text-white">区块类型统计</div>
+                                <div class="card-body">
+                                    <canvas id="sectionTypeChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取DOM元素
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('screenshotUpload');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const resultContainer = document.getElementById('resultContainer');
+            const analyzedImage = document.getElementById('analyzedImage');
+            const elementList = document.getElementById('elementList');
+            const sectionList = document.getElementById('sectionList');
+            const elementCount = document.getElementById('elementCount');
+            const sectionCount = document.getElementById('sectionCount');
+            const zoomRange = document.getElementById('zoomRange');
+            const zoomValue = document.getElementById('zoomValue');
+            const captureScreenBtn = document.getElementById('captureScreenBtn');
+            
+            // 点击上传区域触发文件选择
+            uploadArea.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            // 处理拖放事件
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.classList.add('bg-light');
+            });
+            
+            uploadArea.addEventListener('dragleave', function() {
+                uploadArea.classList.remove('bg-light');
+            });
+            
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('bg-light');
+                
+                if (e.dataTransfer.files.length) {
+                    handleFile(e.dataTransfer.files[0]);
+                }
+            });
+            
+            // 文件选择变更事件
+            fileInput.addEventListener('change', function() {
+                if (fileInput.files.length) {
+                    handleFile(fileInput.files[0]);
+                }
+            });
+            
+            // 缩放控制
+            zoomRange.addEventListener('input', function() {
+                const zoomLevel = zoomRange.value;
+                zoomValue.textContent = `${zoomLevel}%`;
+                analyzedImage.style.width = `${zoomLevel}%`;
+            });
+            
+            // 截取当前屏幕
+            captureScreenBtn.addEventListener('click', function() {
+                alert('注意：浏览器限制，无法直接截取屏幕。请手动截图后上传。');
+                // 在实际应用中，可能需要使用浏览器扩展或其他方式实现屏幕截图
+            });
+            
+            // 处理上传的文件
+            function handleFile(file) {
+                // 检查是否是图像文件
+                if (!file.type.match('image.*')) {
+                    alert('请上传图像文件');
+                    return;
+                }
+                
+                // 显示加载指示器
+                loadingIndicator.style.display = 'block';
+                resultContainer.style.display = 'none';
+                
+                // 创建FormData对象
+                const formData = new FormData();
+                formData.append('screenshot', file);
+                
+                // 发送请求到服务器
+                fetch('/api/analyze', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('分析请求失败');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // 隐藏加载指示器
+                    loadingIndicator.style.display = 'none';
+                    
+                    // 显示结果
+                    resultContainer.style.display = 'block';
+                    
+                    // 设置分析后的图像
+                    analyzedImage.src = data.analyzed_image;
+                    
+                    // 更新元素列表
+                    elementCount.textContent = data.elements.length;
+                    elementList.innerHTML = '';
+                    
+                    data.elements.forEach(element => {
+                        const card = document.createElement('div');
+                        card.className = 'card element-card mb-2';
+                        
+                        let badgeColor;
+                        switch(element.type) {
+                            case 'button': badgeColor = 'danger'; break;
+                            case 'text_field': badgeColor = 'success'; break;
+                            case 'navigation': badgeColor = 'primary'; break;
+                            case 'content_block': badgeColor = 'info'; break;
+                            default: badgeColor = 'secondary';
+                        }
+                        
+                        card.innerHTML = `
+                            <div class="card-body py-2">
+                                <h5 class="card-title">
+                                    <span class="badge bg-${badgeColor}">${element.type}</span> 
+                                    ID: ${element.id}
+                                </h5>
+                                <p class="card-text">
+                                    <small>位置: (${element.x}, ${element.y})</small><br>
+                                    <small>尺寸: ${element.width} x ${element.height}</small><br>
+                                    <small>置信度: ${element.confidence.toFixed(2)}</small>
+                                </p>
+                                ${element.text ? `<p class="card-text"><small>文本: "${element.text.substring(0, 50)}"</small></p>` : ''}
+                            </div>
+                        `;
+                        
+                        elementList.appendChild(card);
+                    });
+                    
+                    // 更新区块列表
+                    sectionCount.textContent = data.sections.length;
+                    sectionList.innerHTML = '';
+                    
+                    data.sections.forEach(section => {
+                        const card = document.createElement('div');
+                        card.className = 'card section-card mb-2';
+                        
+                        let badgeColor;
+                        switch(section.type) {
+                            case 'header': badgeColor = 'danger'; break;
+                            case 'footer': badgeColor = 'info'; break;
+                            case 'sidebar': badgeColor = 'warning'; break;
+                            case 'main_content': badgeColor = 'success'; break;
+                            default: badgeColor = 'secondary';
+                        }
+                        
+                        card.innerHTML = `
+                            <div class="card-body py-2">
+                                <h5 class="card-title">
+                                    <span class="badge bg-${badgeColor}">${section.type}</span> 
+                                    ID: ${section.id}
+                                </h5>
+                                <p class="card-text">
+                                    <small>位置: (${section.x}, ${section.y})</small><br>
+                                    <small>尺寸: ${section.width} x ${section.height}</small><br>
+                                    <small>面积: ${section.area.toFixed(0)}px²</small><br>
+                                    <small>包含元素: ${section.elements.length}个</small>
+                                </p>
+                            </div>
+                        `;
+                        
+                        sectionList.appendChild(card);
+                    });
+                    
+                    // 创建统计图表
+                    createCharts(data.elements, data.sections);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    loadingIndicator.style.display = 'none';
+                    alert(`分析失败: ${error.message}`);
+                });
+            }
+            
+            // 创建统计图表
+            function createCharts(elements, sections) {
+                // 统计元素类型
+                const elementTypes = {};
+                elements.forEach(element => {
+                    elementTypes[element.type] = (elementTypes[element.type] || 0) + 1;
+                });
+                
+                // 统计区块类型
+                const sectionTypes = {};
+                sections.forEach(section => {
+                    sectionTypes[section.type] = (sectionTypes[section.type] || 0) + 1;
+                });
+                
+                // 元素类型图表
+                const elementTypeCtx = document.getElementById('elementTypeChart').getContext('2d');
+                const elementChart = new Chart(elementTypeCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(elementTypes),
+                        datasets: [{
+                            data: Object.values(elementTypes),
+                            backgroundColor: [
+                                '#dc3545', // danger
+                                '#28a745', // success
+                                '#007bff', // primary
+                                '#17a2b8', // info
+                                '#6c757d'  // secondary
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            title: {
+                                display: true,
+                                text: '元素类型分布'
+                            }
+                        }
+                    }
+                });
+                
+                // 区块类型图表
+                const sectionTypeCtx = document.getElementById('sectionTypeChart').getContext('2d');
+                const sectionChart = new Chart(sectionTypeCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: Object.keys(sectionTypes),
+                        datasets: [{
+                            data: Object.values(sectionTypes),
+                            backgroundColor: [
+                                '#dc3545', // danger
+                                '#17a2b8', // info
+                                '#ffc107', // warning
+                                '#28a745', // success
+                                '#6c757d'  // secondary
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            title: {
+                                display: true,
+                                text: '区块类型分布'
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
